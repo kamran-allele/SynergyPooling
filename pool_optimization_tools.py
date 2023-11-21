@@ -5,18 +5,15 @@ import itertools
 
 
 ## For compound library of specific size, will generate a pool set solution (5 compounds per pool)
-def pool_set_generator():    
+def pool_set_generator(Lib_Size=80, pool_size=5):    
     
-    ## change compound library size here
-    Lib_Size = 73
-
     combinations = {}
     singles_count = [0] * Lib_Size    
     [combinations, singles_count] = init_pools(Lib_Size)
-    pool_set_out = all_pools(Lib_Size,combinations,singles_count)
+    pool_set_out = all_pools(Lib_Size,combinations,singles_count, pool_size)
     num_of_pools_in_set = len(pool_set_out)
 
-    return(num_of_pools_in_set)
+    return(pool_set_out, num_of_pools_in_set)
 
 
 ######################################################################
@@ -74,11 +71,11 @@ def add_comb_scorer(pool_current, compounds_to_score,combinations_a):
     return new_comb_scores1
 
 # generates an optimal pool given a starting compound seed
-def pool_gen2(seed,Lib_Size,combinations_p,singles_count_p):
+def pool_gen2(seed,Lib_Size, combinations_p, singles_count_p, pool_size):
     pool = [seed]
     new_pool_score = 0
     
-    while len(pool) < 5:
+    while len(pool) < pool_size:
 
         Lib_List = list(range(Lib_Size))
         new_comb_scores = {}
@@ -109,7 +106,7 @@ def pool_gen2(seed,Lib_Size,combinations_p,singles_count_p):
 
 
 def set_to_mat(pool_s):
-    p_c = np.zeros((len(pool_s),73))
+    p_c = np.zeros((len(pool_s),1000))
     
     row_index =0
     
@@ -162,7 +159,7 @@ def remove_pool_from_mem(pool_to_del,combinations,singles_count):
     return()
 
 
-def all_pools(Lib_Size,combinations,singles_count):
+def all_pools(Lib_Size,combinations,singles_count, pool_size):
     pool_list = []
     total_combos_possible = comb(Lib_Size, 2)
     pool_gen3 = pool_gen2
@@ -179,7 +176,7 @@ def all_pools(Lib_Size,combinations,singles_count):
         seed_db = {}
         if len(sub_max_list) < 65 and len(pool_list)>200:
             for seed_choice in sub_max_list:
-                [pop,combinations,singles_count,new_p_score] = pool_gen3(seed_choice,Lib_Size,combinations,singles_count)
+                [pop,combinations,singles_count,new_p_score] = pool_gen3(seed_choice,Lib_Size,combinations,singles_count,pool_size)
             
                 ## add overlap evaluation here as well
                 seed_db[seed_choice] = new_p_score
@@ -188,11 +185,11 @@ def all_pools(Lib_Size,combinations,singles_count):
             start = sample(keys_withmaxval(seed_db),1)[0]
         
         
-        [pop,combinations,singles_count,new_p_score] = pool_gen3(start,Lib_Size,combinations,singles_count)
+        [pop,combinations,singles_count,new_p_score] = pool_gen3(start,Lib_Size,combinations,singles_count,pool_size)
                 
         pool_list.append(pop)
         
-        if len(pool_list)>80:
+        if len(pool_list)>Lib_Size:
             #print(del_mem,deleted_count)
             
             if del_mem !=0:
@@ -231,21 +228,23 @@ def init_pools(Lib_Size):
 
 ######
 
-# Gives stats on 1 pool set generation run (pool size of 5) 
+# Generates pool for library of 100 compounds (pool size of 5). Output pools to list 
 if __name__ == "__main__":
     
-    total_num_of_compounds_to_pool = 73
+    total_num_of_compounds_to_pool = 100
 
     import timeit
     start_time = timeit.default_timer()
-    pool_set_size_out = pool_set_generator()
+    pooling_solution, pool_set_size_out = pool_set_generator(total_num_of_compounds_to_pool)
     elapsed = timeit.default_timer() - start_time
 
-    perfect_pooling = (total_num_of_compounds_to_pool) * (total_num_of_compounds_to_pool - 1) / (2 * 10)
-
     for _ in [1]:
-        p_waste = round(pool_set_size_out / (perfect_pooling) - 1, 3)
+        print("Compound Library Size: ",total_num_of_compounds_to_pool)
+        print("Compounds per pool: 5")
         print("Run Time: ", round(elapsed, 2), " s")
-        print("Total number of unique combinations represented")
         print("Total pools: ", pool_set_size_out)
-        print("pooling waste:", p_waste)
+    
+    from datetime import datetime
+    now = datetime.now()
+    dt_csv_filename = now.strftime("%d%m%Y_%H%M%S") + ".csv"
+    np.savetxt(dt_csv_filename, pooling_solution,fmt='%i', delimiter=",")
